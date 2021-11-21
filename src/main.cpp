@@ -72,13 +72,5 @@ void loop()
     takeSteps(-commandNumber);
   }
   bluetoothMessage = "";
-
-  // Serial.println("FORWARDS");
-  // takeSteps(5000);
-  // delay(1000);
-  // Serial.println("BACKWARDS");
-  // takeSteps(-5000);
-  // delay(1000);
-
   delay(50);
 }
