@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.pyx": "python",
+        "system_error": "cpp",
+        "*.tcc": "cpp"
+    }
+}
