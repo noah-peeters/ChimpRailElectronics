@@ -6,6 +6,7 @@
     * Indicate (central can subscribe to this characteristic)
 */
 #include <settings.h>
+#include <rail_movement.h>
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
@@ -37,6 +38,30 @@ class MyServerCallbacks : public BLEServerCallbacks
         Serial.println("onDisconnect, will start advertising");
         g_centralConnected = false;
         BLEDevice::startAdvertising();
+    }
+};
+
+class StepMovementCallbacks : public BLECharacteristicCallbacks
+{
+    void onWrite(BLECharacteristic *pCharacteristic)
+    {
+        String stringValue = pCharacteristic->getValue().c_str();
+
+        if (stringValue.length() > 0)
+        {
+            String commandName = stringValue.substring(0, 3);
+            int commandNumber = stringValue.substring(3).toInt();
+            if (commandName == "FWD")
+            {
+                Serial.println("Take " + String(commandNumber) + " steps FWD");
+                takeSteps(commandNumber);
+            }
+            else if (commandName == "BCK")
+            {
+                Serial.println("Take " + String(commandNumber) + " steps BCK");
+                takeSteps(-commandNumber);
+            }
+        }
     }
 };
 
@@ -142,7 +167,7 @@ void setup()
     {
         uint32_t propertyFlags = BLECharacteristic::PROPERTY_WRITE;
         BLECharacteristic *pCharWrite = pService->createCharacteristic(STEP_MOVEMENT_WRITE_UUID, propertyFlags);
-        pCharWrite->setCallbacks(new MyCharPrintingCallbacks("CharWrite"));
+        pCharWrite->setCallbacks(new StepMovementCallbacks());
         pCharWrite->setValue("");
         g_pCharWrite = pCharWrite;
     }
