@@ -2,6 +2,10 @@
 #define SETTINGS_H
 
 #include <Arduino.h>
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <BLEServer.h>
+#include <BLE2902.h>
 
 // I/O pins
 #define MOTOR_ENA_PIN 25
