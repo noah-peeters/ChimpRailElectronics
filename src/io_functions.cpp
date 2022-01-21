@@ -1,6 +1,7 @@
 #include "settings.h"
-#include "rail_movement.h"
+#include "io_functions.h"
 
+// Move the rail an amount of steps (direction specified with a positive or negative number)
 void takeSteps(int stepAmount)
 {
     // Set direction
@@ -22,5 +23,16 @@ void takeSteps(int stepAmount)
         delayMicroseconds(STEPPER_PULSE_DELAY);
         digitalWrite(MOTOR_PUL_PIN, LOW);
         delayMicroseconds(STEPPER_PULSE_DELAY);
+    }
+}
+
+// Take a single or multiple picture(s)
+void takePictures(int amount)
+{
+    for (int i = 1; i <= amount; i++)
+    {
+        digitalWrite(SHUTTER_PIN, HIGH);
+        delay(50);
+        digitalWrite(SHUTTER_PIN, LOW);
     }
 }

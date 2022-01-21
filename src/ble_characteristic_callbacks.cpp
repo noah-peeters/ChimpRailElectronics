@@ -1,8 +1,8 @@
 #include "settings.h"
-#include "rail_movement.h"
+#include "io_functions.h"
 #include "ble_characteristic_callbacks.h"
 
-int STACK_IN_PROGRESS = false;
+bool STACK_IN_PROGRESS = false;
 
 void StepMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
 {
@@ -123,16 +123,45 @@ void StartStackingCallback::onWrite(BLECharacteristic *pCharacteristic)
         return;
     }
 
-    if (preShutterWaitTime && postShutterWaitTime && shuttersPerStep && stepSize && movementDirection && numberOfStepsToTake && returnToStartPosition)
+    if (preShutterWaitTime && postShutterWaitTime && shuttersPerStep && stepSize && movementDirection && numberOfStepsToTake && returnToStartPosition != NULL)
     {
+        STACK_IN_PROGRESS = true;
         Serial.println("Started stacking!");
-        
-        Serial.println(String(preShutterWaitTime));
-        Serial.println(String(postShutterWaitTime));
-        Serial.println(String(shuttersPerStep));
-        Serial.println(String(stepSize));
-        Serial.println(movementDirection);
-        Serial.println(String(numberOfStepsToTake));
-        Serial.println(String(returnToStartPosition));
+
+        // Start stacking loop (can be stopped by setting "STACK_IN_PROGRESS = false")
+        int numberOfStepsTaken = 0; // Keep track of amount of steps taken (for stopping on request)
+        for (int i = 1; i <= numberOfStepsToTake && STACK_IN_PROGRESS; i++)
+        {
+            Serial.println("Step" + String(i));
+            // Take picture(s)
+            takePictures(shuttersPerStep);
+
+            // Move rail forwards
+            delay(postShutterWaitTime * 1000);
+            if (movementDirection == "FWD")
+            {
+                takeSteps(stepSize);
+            }
+            else if (movementDirection == "BCK")
+            {
+                takeSteps(-stepSize);
+            }
+            delay(preShutterWaitTime * 1000);
+        }
+
+        // Return to start position
+        if (returnToStartPosition == true)
+        {
+            Serial.println("Return to start position");
+            if (movementDirection == "FWD")
+            {
+                takeSteps(-stepSize * numberOfStepsTaken);
+            }
+            else if (movementDirection == "BCK")
+            {
+                takeSteps(stepSize * numberOfStepsTaken);
+            }
+        }
+        STACK_IN_PROGRESS = false;
     }
 }

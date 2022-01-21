@@ -6,8 +6,6 @@
     * Indicate (central can subscribe to this characteristic)
 */
 #include "settings.h"
-// TODO: Separate BLE Callbacks to different file??
-// #include <rail_movement.h>
 #include "ble_characteristic_callbacks.h"
 
 // --------
