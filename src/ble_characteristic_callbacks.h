@@ -12,6 +12,12 @@ public:
     void onWrite(BLECharacteristic *pCharacteristic);
 };
 
+class ContinuousMovementCallbacks : public BLECharacteristicCallbacks
+{
+public:
+    void onWrite(BLECharacteristic *pCharacteristic);
+};
+
 class StartStackingCallback : public BLECharacteristicCallbacks
 {
 public:

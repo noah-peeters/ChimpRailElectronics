@@ -3,6 +3,9 @@
 #include "ble_characteristic_callbacks.h"
 
 bool STACK_IN_PROGRESS = false;
+bool CONTINUOUS_MOVEMENT_IN_PROGRESS = false;
+
+// TODO: Don't yield inside callbacks
 
 void StepMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
 {
@@ -21,6 +24,42 @@ void StepMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
         {
             Serial.println("Take " + String(commandNumber) + " steps BCK");
             takeSteps(-commandNumber);
+        }
+    }
+}
+
+void ContinuousMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
+{
+    String stringValue = pCharacteristic->getValue().c_str();
+
+    if (stringValue.length() > 0)
+    {
+        String commandName = stringValue.substring(0, 3);
+        String commandValue = stringValue.substring(3);
+
+        // Start or stop movement
+        if (commandValue == "true")
+        {
+            CONTINUOUS_MOVEMENT_IN_PROGRESS = true;
+        }
+        else
+        {
+            CONTINUOUS_MOVEMENT_IN_PROGRESS = false;
+        }
+
+        if (commandName == "FWD")
+        {
+            while (CONTINUOUS_MOVEMENT_IN_PROGRESS == true)
+            {
+                takeSteps(100, 1000);
+            }
+        }
+        else if (commandName == "BCK")
+        {
+            while (CONTINUOUS_MOVEMENT_IN_PROGRESS == true)
+            {
+                takeSteps(-100, 1000);
+            }
         }
     }
 }

@@ -5,13 +5,13 @@
 AccelStepper stepperMotor(AccelStepper::DRIVER, MOTOR_PUL_PIN, MOTOR_DIR_PIN);
 
 // Move the rail an amount of steps (direction specified with a positive or negative number)
-void takeSteps(int stepAmount)
+void takeSteps(int stepAmount, int acceleration)
 {
     // TODO: Test with AccelStepper library
-    stepperMotor.setMaxSpeed(500);
-    stepperMotor.setAcceleration(20);
+    stepperMotor.setMaxSpeed(250);
+    stepperMotor.setAcceleration(acceleration);
 
-    stepperMotor.moveTo(stepAmount);
+    stepperMotor.move(stepAmount);
     stepperMotor.runToPosition();
 
     // Set direction
@@ -34,6 +34,10 @@ void takeSteps(int stepAmount)
     //     digitalWrite(MOTOR_PUL_PIN, LOW);
     //     delayMicroseconds(STEPPER_PULSE_DELAY);
     // }
+}
+
+void setMotorDirection()
+{
 }
 
 // Take a single or multiple picture(s)
