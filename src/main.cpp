@@ -8,6 +8,11 @@
 #include "settings.h"
 #include "ble_characteristic_callbacks.h"
 
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <BLEServer.h>
+#include <BLE2902.h>
+
 // --------
 // Global variables
 // --------

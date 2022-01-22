@@ -1,29 +1,39 @@
+#include <AccelStepper.h>
 #include "settings.h"
 #include "io_functions.h"
+
+AccelStepper stepperMotor(AccelStepper::DRIVER, MOTOR_PUL_PIN, MOTOR_DIR_PIN);
 
 // Move the rail an amount of steps (direction specified with a positive or negative number)
 void takeSteps(int stepAmount)
 {
-    // Set direction
-    if (stepAmount < 0)
-    {
-        // Backwards
-        digitalWrite(MOTOR_DIR_PIN, LOW);
-        stepAmount = -stepAmount;
-    }
-    else
-    {
-        // Forwards
-        digitalWrite(MOTOR_DIR_PIN, HIGH);
-    }
+    // TODO: Test with AccelStepper library
+    stepperMotor.setMaxSpeed(500);
+    stepperMotor.setAcceleration(20);
 
-    for (int i = 0; i <= stepAmount; i++)
-    {
-        digitalWrite(MOTOR_PUL_PIN, HIGH);
-        delayMicroseconds(STEPPER_PULSE_DELAY);
-        digitalWrite(MOTOR_PUL_PIN, LOW);
-        delayMicroseconds(STEPPER_PULSE_DELAY);
-    }
+    stepperMotor.moveTo(stepAmount);
+    stepperMotor.runToPosition();
+
+    // Set direction
+    // if (stepAmount < 0)
+    // {
+    //     // Backwards
+    //     digitalWrite(MOTOR_DIR_PIN, LOW);
+    //     stepAmount = -stepAmount;
+    // }
+    // else
+    // {
+    //     // Forwards
+    //     digitalWrite(MOTOR_DIR_PIN, HIGH);
+    // }
+
+    // for (int i = 0; i <= stepAmount; i++)
+    // {
+    //     digitalWrite(MOTOR_PUL_PIN, HIGH);
+    //     delayMicroseconds(STEPPER_PULSE_DELAY);
+    //     digitalWrite(MOTOR_PUL_PIN, LOW);
+    //     delayMicroseconds(STEPPER_PULSE_DELAY);
+    // }
 }
 
 // Take a single or multiple picture(s)
