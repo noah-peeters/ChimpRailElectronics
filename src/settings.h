@@ -8,7 +8,7 @@
 #define MOTOR_ENA_PIN 25
 #define MOTOR_DIR_PIN 26
 #define MOTOR_PUL_PIN 27
-#define HOME_LIMIT_SWITCH_PIN 28
+#define HOME_LIMIT_SWITCH_PIN 33
 #define SHUTTER_PIN 16
 
 // Other constants
