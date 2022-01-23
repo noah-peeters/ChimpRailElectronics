@@ -2,7 +2,9 @@
 #include "io_functions.h"
 #include "ble_characteristic_callbacks.h"
 
-// TODO: Don't yield inside callbacks
+TaskHandle_t STACK_IN_PROGRESS_TASK;
+
+// TODO: Test step movement + continuous movement
 void StepMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
 {
     String stringValue = pCharacteristic->getValue().c_str();
@@ -33,48 +35,94 @@ void ContinuousMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
         String commandName = stringValue.substring(0, 3);
         String commandValue = stringValue.substring(3);
 
-        // Start or stop movement
-        if (commandValue == "true")
+        if (commandValue == "false")
         {
-            CONTINUOUS_MOVEMENT_IN_PROGRESS = true;
-        }
-        else
-        {
-            CONTINUOUS_MOVEMENT_IN_PROGRESS = false;
+            // Stop movement
+            STEPPER_MOTOR.stop();
+            Serial.println("Stop motor movement.");
         }
 
         if (commandName == "FWD")
         {
-            while (CONTINUOUS_MOVEMENT_IN_PROGRESS == true)
-            {
-                STEPPER_MOTOR.move(100);
-            }
+            // Move to end of rail
+            STEPPER_MOTOR.moveTo(MAX_STEPS_LIMIT);
+            Serial.println("Move forwards.");
         }
         else if (commandName == "BCK")
         {
-            while (CONTINUOUS_MOVEMENT_IN_PROGRESS == true)
-            {
-                STEPPER_MOTOR.move(-100);
-            }
+            // Move to start of rail
+            STEPPER_MOTOR.moveTo(0);
+            Serial.println("Move backwards.");
         }
     }
 }
 
+// Define vars that get extracted from received msg
+int preShutterWaitTime;
+int postShutterWaitTime;
+int shuttersPerStep;
+int stepSize;
+String movementDirection;
+int numberOfStepsToTake;
+bool returnToStartPosition;
+
+void stackingLoop(void *parameter)
+{
+    if (preShutterWaitTime && postShutterWaitTime && shuttersPerStep && stepSize && movementDirection && numberOfStepsToTake && returnToStartPosition != NULL)
+    {
+        Serial.println("Started stacking!");
+
+        // Start stacking loop
+        int numberOfStepsTaken = 0; // Keep track of amount of steps taken (for stopping on request)
+        for (int i = 1; i <= numberOfStepsToTake; i++)
+        {
+            Serial.println("Step" + String(i));
+            // Take picture(s)
+            takePictures(shuttersPerStep);
+
+            // Move rail forwards
+            delay(postShutterWaitTime * 1000);
+            if (movementDirection == "FWD")
+            {
+                STEPPER_MOTOR.move(stepSize);
+            }
+            else if (movementDirection == "BCK")
+            {
+                STEPPER_MOTOR.move(-stepSize);
+            }
+            delay(preShutterWaitTime * 1000);
+        }
+
+        // Return to start position
+        if (returnToStartPosition == true)
+        {
+            Serial.println("Return to start position");
+            if (movementDirection == "FWD")
+            {
+                STEPPER_MOTOR.move(-stepSize * numberOfStepsTaken);
+            }
+            else if (movementDirection == "BCK")
+            {
+                STEPPER_MOTOR.move(stepSize * numberOfStepsTaken);
+            }
+        }
+    }
+    // Delete task
+    // TODO: Check if needed
+    vTaskDelete(NULL);
+}
+
+// TODO: Don't yield inside callback
 void StartStackingCallback::onWrite(BLECharacteristic *pCharacteristic)
 {
-    // Define vars that get extracted from received msg
-    int preShutterWaitTime;
-    int postShutterWaitTime;
-    int shuttersPerStep;
-    int stepSize;
-    String movementDirection;
-    int numberOfStepsToTake;
-    bool returnToStartPosition;
-
     String stringValue = pCharacteristic->getValue().c_str();
     Serial.println(stringValue);
 
-    if (stringValue.length() > 0)
+    // Stop currently running stacking loop
+    vTaskDelete(STACK_IN_PROGRESS_TASK);
+
+    // TODO: Stop stacking button in app will send "STOP"
+    if (stringValue.length() > 0 && stringValue != "STOP")
     {
         // Extract data
         int previousSemicolonIndex = -1; // Start on "-1" b/c of +1
@@ -155,48 +203,12 @@ void StartStackingCallback::onWrite(BLECharacteristic *pCharacteristic)
     }
     else
     {
+        // Invalid data; user likely wanted to stop stacking
         return;
     }
 
-    if (preShutterWaitTime && postShutterWaitTime && shuttersPerStep && stepSize && movementDirection && numberOfStepsToTake && returnToStartPosition != NULL)
-    {
-        STACK_IN_PROGRESS = true;
-        Serial.println("Started stacking!");
-
-        // Start stacking loop (can be stopped by setting "STACK_IN_PROGRESS = false")
-        int numberOfStepsTaken = 0; // Keep track of amount of steps taken (for stopping on request)
-        for (int i = 1; i <= numberOfStepsToTake && STACK_IN_PROGRESS; i++)
-        {
-            Serial.println("Step" + String(i));
-            // Take picture(s)
-            takePictures(shuttersPerStep);
-
-            // Move rail forwards
-            delay(postShutterWaitTime * 1000);
-            if (movementDirection == "FWD")
-            {
-                STEPPER_MOTOR.move(stepSize);
-            }
-            else if (movementDirection == "BCK")
-            {
-                STEPPER_MOTOR.move(-stepSize);
-            }
-            delay(preShutterWaitTime * 1000);
-        }
-
-        // Return to start position
-        if (returnToStartPosition == true)
-        {
-            Serial.println("Return to start position");
-            if (movementDirection == "FWD")
-            {
-                STEPPER_MOTOR.move(-stepSize * numberOfStepsTaken);
-            }
-            else if (movementDirection == "BCK")
-            {
-                STEPPER_MOTOR.move(stepSize * numberOfStepsTaken);
-            }
-        }
-        STACK_IN_PROGRESS = false;
-    }
+    char task1Param[12] = "task1Param";
+    int taskPriority = 4;
+    int coreId = 0;
+    xTaskCreatePinnedToCore(stackingLoop, "StackingLoopTask", 10000, (void *)task1Param, taskPriority, &STACK_IN_PROGRESS_TASK, coreId);
 }

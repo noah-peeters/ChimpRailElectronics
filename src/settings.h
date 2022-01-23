@@ -12,7 +12,7 @@
 #define SHUTTER_PIN 16
 
 // Other constants
-#define STEPPER_PULSE_DELAY 50 // Delay in µs between stepper motor pulses
+#define MAX_STEPS_LIMIT 25000 // Max amount of steps to allow (move from absolute 0 to end of rail)
 
 // Bluetooth settings
 #define DEVICE_DISPLAY_NAME "Stacking rail"
@@ -26,8 +26,6 @@
 #define CHAR_INDICATE_UUID "d2f362f4-6542-4b13-be5e-8c81d423a347"
 
 // Shared variables (between multiple files)
-extern bool STACK_IN_PROGRESS;
-extern bool CONTINUOUS_MOVEMENT_IN_PROGRESS;
 extern AccelStepper STEPPER_MOTOR;
 
 #endif

@@ -14,8 +14,6 @@
 #include <BLE2902.h>
 
 // Shared variables setup
-bool STACK_IN_PROGRESS = false;
-bool CONTINUOUS_MOVEMENT_IN_PROGRESS = false;
 AccelStepper STEPPER_MOTOR(AccelStepper::DRIVER, MOTOR_PUL_PIN, MOTOR_DIR_PIN);
 
 // --------
