@@ -121,17 +121,11 @@ private:
     std::string m_name;
 };
 
-// --------
-// Application lifecycle: setup & loop
-// --------
-void setup()
+void homeMotor()
 {
-    Serial.begin(115200);
-
-    STEPPER_MOTOR.setMaxSpeed(MOTOR_MAX_SPEED);
-    STEPPER_MOTOR.setAcceleration(MOTOR_MAX_ACCELERATION);
-    // Home stepper motor
     pinMode(HOME_LIMIT_SWITCH_PIN, INPUT);
+
+    // Move backwards until switch is hit (if not already hit)
     if (digitalRead(HOME_LIMIT_SWITCH_PIN) == LOW)
     {
         STEPPER_MOTOR.move(-100000000);
@@ -143,6 +137,19 @@ void setup()
     }
     STEPPER_MOTOR.stop();
     STEPPER_MOTOR.setCurrentPosition(0);
+}
+
+// --------
+// Application lifecycle: setup & loop
+// --------
+void setup()
+{
+    Serial.begin(115200);
+
+    STEPPER_MOTOR.setMaxSpeed(MOTOR_MAX_SPEED);
+    STEPPER_MOTOR.setAcceleration(MOTOR_MAX_ACCELERATION);
+    // Home stepper motor
+    homeMotor();
 
     // BLE peripheral setup
     BLEDevice::init(DEVICE_DISPLAY_NAME);
