@@ -128,17 +128,20 @@ void setup()
 {
     Serial.begin(115200);
 
-    // Stepper motor setup
-    STEPPER_MOTOR.setMaxSpeed(250);
-    STEPPER_MOTOR.setAcceleration(20);
-
+    STEPPER_MOTOR.setMaxSpeed(MOTOR_MAX_SPEED);
+    STEPPER_MOTOR.setAcceleration(MOTOR_MAX_ACCELERATION);
     // Home stepper motor
-    while (digitalRead(HOME_LIMIT_SWITCH_PIN) == LOW)
+    pinMode(HOME_LIMIT_SWITCH_PIN, INPUT);
+    if (digitalRead(HOME_LIMIT_SWITCH_PIN) == LOW)
     {
-        // Keep moving one step back
-        STEPPER_MOTOR.move(-1);
-        STEPPER_MOTOR.run();
+        STEPPER_MOTOR.move(-100000000);
+        while (digitalRead(HOME_LIMIT_SWITCH_PIN) == LOW)
+        {
+            // Keep moving back
+            STEPPER_MOTOR.run();
+        }
     }
+    STEPPER_MOTOR.stop();
     STEPPER_MOTOR.setCurrentPosition(0);
 
     // BLE peripheral setup
@@ -169,7 +172,7 @@ void setup()
     {
         uint32_t propertyFlags = BLECharacteristic::PROPERTY_WRITE;
         BLECharacteristic *pCharWrite = pService->createCharacteristic(CONTINUOUS_MOVEMENT_WRITE_UUID, propertyFlags);
-        pCharWrite->setCallbacks(new MyCharPrintingCallbacks("CharWrite"));
+        pCharWrite->setCallbacks(new ContinuousMovementCallbacks());
         pCharWrite->setValue("");
         g_pCharWrite = pCharWrite;
     }
@@ -210,6 +213,19 @@ void setup()
 // Main event loop
 void loop()
 {
+    // Change target if not in valid range
+    if (STEPPER_MOTOR.targetPosition())
+    {
+        if (STEPPER_MOTOR.targetPosition() > MAX_STEPS_LIMIT)
+        {
+            STEPPER_MOTOR.moveTo(MAX_STEPS_LIMIT);
+        }
+        else if (STEPPER_MOTOR.targetPosition() < 0)
+        {
+            STEPPER_MOTOR.moveTo(0);
+        }
+    }
+
     // Update motor (if needed)
     if (abs(STEPPER_MOTOR.targetPosition() - STEPPER_MOTOR.currentPosition()) > 0)
     {

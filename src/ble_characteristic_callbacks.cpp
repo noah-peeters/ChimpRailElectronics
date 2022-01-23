@@ -40,6 +40,7 @@ void ContinuousMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
             // Stop movement
             STEPPER_MOTOR.stop();
             Serial.println("Stop motor movement.");
+            return;
         }
 
         if (commandName == "FWD")

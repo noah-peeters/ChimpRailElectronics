@@ -12,7 +12,9 @@
 #define SHUTTER_PIN 16
 
 // Other constants
-#define MAX_STEPS_LIMIT 25000 // Max amount of steps to allow (move from absolute 0 to end of rail)
+#define MAX_STEPS_LIMIT 215000       // Max amount of steps to allow (move from absolute 0 to end of rail)
+#define MOTOR_MAX_SPEED 12000        // Max speed of motor
+#define MOTOR_MAX_ACCELERATION 12000 // Max acceleration of motor
 
 // Bluetooth settings
 #define DEVICE_DISPLAY_NAME "Stacking rail"
