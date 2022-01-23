@@ -13,6 +13,11 @@
 #include <BLEServer.h>
 #include <BLE2902.h>
 
+// Shared variables setup
+bool STACK_IN_PROGRESS = false;
+bool CONTINUOUS_MOVEMENT_IN_PROGRESS = false;
+AccelStepper STEPPER_MOTOR(AccelStepper::DRIVER, MOTOR_PUL_PIN, MOTOR_DIR_PIN);
+
 // --------
 // Global variables
 // --------
@@ -124,8 +129,21 @@ private:
 void setup()
 {
     Serial.begin(115200);
-    Serial.println("BLE Peripheral setup started");
 
+    // Stepper motor setup
+    STEPPER_MOTOR.setMaxSpeed(250);
+    STEPPER_MOTOR.setAcceleration(20);
+
+    // Home stepper motor
+    while (digitalRead(HOME_LIMIT_SWITCH_PIN) == LOW)
+    {
+        // Keep moving one step back
+        STEPPER_MOTOR.move(-1);
+        STEPPER_MOTOR.run();
+    }
+    STEPPER_MOTOR.setCurrentPosition(0);
+
+    // BLE peripheral setup
     BLEDevice::init(DEVICE_DISPLAY_NAME);
     g_pServer = BLEDevice::createServer();
     g_pServer->setCallbacks(new MyServerCallbacks());
@@ -191,21 +209,12 @@ void setup()
     Serial.println("BLE Peripheral setup done, started advertising");
 }
 
+// Main event loop
 void loop()
 {
-    /*
-      Serial.print("Setting read characteristic: '");
-      Serial.print(commandData.c_str());
-      Serial.println("'");
-      g_pCharRead->setValue(commandData);
-    */
-
-    /*
-      Serial.print("Setting indicate characteristic: '");
-      Serial.print(commandData.c_str());
-      Serial.println("'");
-      g_pCharIndicate->setValue(commandData);
-      g_pCharIndicate->indicate();
-      return;
-    */
+    // Update motor (if needed)
+    if (abs(STEPPER_MOTOR.targetPosition() - STEPPER_MOTOR.currentPosition()) > 0)
+    {
+        STEPPER_MOTOR.run();
+    }
 }

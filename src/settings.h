@@ -2,14 +2,16 @@
 #define SETTINGS_H
 
 #include <Arduino.h>
+#include "AccelStepper.h"
 
 // I/O pins
 #define MOTOR_ENA_PIN 25
 #define MOTOR_DIR_PIN 26
 #define MOTOR_PUL_PIN 27
+#define HOME_LIMIT_SWITCH_PIN 28
 #define SHUTTER_PIN 16
 
-// Constants
+// Other constants
 #define STEPPER_PULSE_DELAY 50 // Delay in µs between stepper motor pulses
 
 // Bluetooth settings
@@ -22,5 +24,10 @@
 // TODO: Remove/replace
 #define CHAR_READ_UUID "f33dee97-d3d8-4fbd-8162-c980133f0c93"
 #define CHAR_INDICATE_UUID "d2f362f4-6542-4b13-be5e-8c81d423a347"
+
+// Shared variables (between multiple files)
+extern bool STACK_IN_PROGRESS;
+extern bool CONTINUOUS_MOVEMENT_IN_PROGRESS;
+extern AccelStepper STEPPER_MOTOR;
 
 #endif

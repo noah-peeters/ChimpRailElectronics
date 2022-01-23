@@ -2,11 +2,7 @@
 #include "io_functions.h"
 #include "ble_characteristic_callbacks.h"
 
-bool STACK_IN_PROGRESS = false;
-bool CONTINUOUS_MOVEMENT_IN_PROGRESS = false;
-
 // TODO: Don't yield inside callbacks
-
 void StepMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
 {
     String stringValue = pCharacteristic->getValue().c_str();
@@ -18,12 +14,12 @@ void StepMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
         if (commandName == "FWD")
         {
             Serial.println("Take " + String(commandNumber) + " steps FWD");
-            takeSteps(commandNumber);
+            STEPPER_MOTOR.move(commandNumber);
         }
         else if (commandName == "BCK")
         {
             Serial.println("Take " + String(commandNumber) + " steps BCK");
-            takeSteps(-commandNumber);
+            STEPPER_MOTOR.move(-commandNumber);
         }
     }
 }
@@ -51,14 +47,14 @@ void ContinuousMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
         {
             while (CONTINUOUS_MOVEMENT_IN_PROGRESS == true)
             {
-                takeSteps(100, 1000);
+                STEPPER_MOTOR.move(100);
             }
         }
         else if (commandName == "BCK")
         {
             while (CONTINUOUS_MOVEMENT_IN_PROGRESS == true)
             {
-                takeSteps(-100, 1000);
+                STEPPER_MOTOR.move(-100);
             }
         }
     }
@@ -179,11 +175,11 @@ void StartStackingCallback::onWrite(BLECharacteristic *pCharacteristic)
             delay(postShutterWaitTime * 1000);
             if (movementDirection == "FWD")
             {
-                takeSteps(stepSize);
+                STEPPER_MOTOR.move(stepSize);
             }
             else if (movementDirection == "BCK")
             {
-                takeSteps(-stepSize);
+                STEPPER_MOTOR.move(-stepSize);
             }
             delay(preShutterWaitTime * 1000);
         }
@@ -194,11 +190,11 @@ void StartStackingCallback::onWrite(BLECharacteristic *pCharacteristic)
             Serial.println("Return to start position");
             if (movementDirection == "FWD")
             {
-                takeSteps(-stepSize * numberOfStepsTaken);
+                STEPPER_MOTOR.move(-stepSize * numberOfStepsTaken);
             }
             else if (movementDirection == "BCK")
             {
-                takeSteps(stepSize * numberOfStepsTaken);
+                STEPPER_MOTOR.move(stepSize * numberOfStepsTaken);
             }
         }
         STACK_IN_PROGRESS = false;
