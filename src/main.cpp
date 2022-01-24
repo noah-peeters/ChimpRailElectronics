@@ -125,7 +125,7 @@ void homeMotor()
 {
     pinMode(HOME_LIMIT_SWITCH_PIN, INPUT);
 
-    // Move backwards until switch is hit (if not already hit)
+    // Move backwards until switch is pressed (if not already pressed)
     if (digitalRead(HOME_LIMIT_SWITCH_PIN) == LOW)
     {
         STEPPER_MOTOR.move(-100000000);
@@ -135,6 +135,12 @@ void homeMotor()
             STEPPER_MOTOR.run();
         }
     }
+    STEPPER_MOTOR.stop();
+    STEPPER_MOTOR.setCurrentPosition(0);
+
+    // Move away from switch (release the switch)
+    STEPPER_MOTOR.move(5000);
+    STEPPER_MOTOR.runToPosition();
     STEPPER_MOTOR.stop();
     STEPPER_MOTOR.setCurrentPosition(0);
 }
