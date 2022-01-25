@@ -15,6 +15,7 @@
 
 // Shared variables setup
 AccelStepper STEPPER_MOTOR(AccelStepper::DRIVER, MOTOR_PUL_PIN, MOTOR_DIR_PIN);
+Scheduler TASK_RUNNER;
 
 // --------
 // Global variables
@@ -226,6 +227,9 @@ void setup()
 // Main event loop
 void loop()
 {
+    // Run task scheduler
+    TASK_RUNNER.execute();
+
     // Change target if not in valid range
     if (STEPPER_MOTOR.targetPosition())
     {
