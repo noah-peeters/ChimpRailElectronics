@@ -15,7 +15,14 @@
 
 // Shared variables setup
 AccelStepper STEPPER_MOTOR(AccelStepper::DRIVER, MOTOR_PUL_PIN, MOTOR_DIR_PIN);
-Scheduler TASK_RUNNER;
+String STACK_PROGRESS_STATE = "";
+int STACK_PRE_SHUTTER_WAIT_TIME = 0;
+int STACK_POST_SHUTTER_WAIT_TIME = 0;
+int STACK_SHUTTERS_PER_STEP = 0;
+int STACK_STEP_SIZE = 0;
+String STACK_MOVEMENT_DIRECTION = "";
+int STACK_NUMBER_OF_STEPS_TO_TAKE = 0;
+String STACK_RETURN_TO_START_POSITION = "";
 
 // --------
 // Global variables
@@ -225,10 +232,95 @@ void setup()
 }
 
 // Main event loop
+unsigned long previousTaskTime = 0;
+int stepsTakenSinceStart = 0;
+int picturesTakenOnThisStep = 0;
 void loop()
 {
-    // Run task scheduler
-    TASK_RUNNER.execute();
+    // Process next stacking operation
+    if (STACK_PROGRESS_STATE.length() > 0)
+    {
+        if (STACK_PROGRESS_STATE == "TakePictures")
+        {
+            // Take a picture
+            if (millis() - previousTaskTime > STACK_PRE_SHUTTER_WAIT_TIME * 1000)
+            {
+                Serial.println("Take picture");
+                digitalWrite(SHUTTER_PIN, HIGH);
+                delay(50); // TODO: Check if delay can be smaller (not super important)
+                digitalWrite(SHUTTER_PIN, LOW);
+
+                previousTaskTime = millis();
+                picturesTakenOnThisStep += 1;
+                if (picturesTakenOnThisStep >= STACK_SHUTTERS_PER_STEP)
+                {
+                    // Proceed to rail movement
+                    picturesTakenOnThisStep = 0;
+                    STACK_PROGRESS_STATE = "MoveRail";
+                }
+            }
+        }
+        if (STACK_PROGRESS_STATE == "MoveRail")
+        {
+            // Move rail
+            if (millis() - previousTaskTime > STACK_POST_SHUTTER_WAIT_TIME * 1000)
+            {
+                if (STACK_MOVEMENT_DIRECTION == "FWD")
+                {
+                    STEPPER_MOTOR.move(STACK_STEP_SIZE);
+                }
+                else if (STACK_MOVEMENT_DIRECTION == "BCK")
+                {
+                    STEPPER_MOTOR.move(-STACK_STEP_SIZE);
+                }
+
+                previousTaskTime = millis();
+                stepsTakenSinceStart += 1;
+                if (stepsTakenSinceStart >= STACK_NUMBER_OF_STEPS_TO_TAKE)
+                {
+                    // Stop stacking
+                    STACK_PROGRESS_STATE = "StopStacking";
+                }
+                else
+                {
+                    // Proceed to taking pictures
+                    STACK_PROGRESS_STATE = "TakePictures";
+                }
+            }
+        }
+        if (STACK_PROGRESS_STATE == "StopStacking")
+        {
+            // Stop stacking process
+            // TODO: Change "STACK_RETURN_TO_START_POSITION" to be a bool instead of a string
+            if (STACK_RETURN_TO_START_POSITION == "true" && stepsTakenSinceStart > 0)
+            {
+                // Move to start position (if asked by user)
+                Serial.println("Return to start position");
+                if (STACK_MOVEMENT_DIRECTION == "FWD")
+                {
+                    STEPPER_MOTOR.move(-STACK_STEP_SIZE * stepsTakenSinceStart);
+                }
+                else if (STACK_MOVEMENT_DIRECTION == "BCK")
+                {
+                    STEPPER_MOTOR.move(STACK_STEP_SIZE * stepsTakenSinceStart);
+                }
+            }
+
+            // Reset vars
+            previousTaskTime = 0;
+            stepsTakenSinceStart = 0;
+            picturesTakenOnThisStep = 0;
+
+            STACK_PROGRESS_STATE = "";
+            STACK_PRE_SHUTTER_WAIT_TIME = 0;
+            STACK_POST_SHUTTER_WAIT_TIME = 0;
+            STACK_SHUTTERS_PER_STEP = 0;
+            STACK_STEP_SIZE = 0;
+            STACK_MOVEMENT_DIRECTION = "";
+            STACK_NUMBER_OF_STEPS_TO_TAKE = 0;
+            STACK_RETURN_TO_START_POSITION = "";
+        }
+    }
 
     // Change target if not in valid range
     if (STEPPER_MOTOR.targetPosition())

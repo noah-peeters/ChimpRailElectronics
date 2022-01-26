@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 #include "AccelStepper.h"
-#include "TaskSchedulerDeclarations.h"
 
 // I/O pins
 #define MOTOR_ENA_PIN 25
@@ -30,6 +29,14 @@
 
 // Shared variables (between multiple files)
 extern AccelStepper STEPPER_MOTOR;
-extern Scheduler TASK_RUNNER;
+
+extern String STACK_PROGRESS_STATE;
+extern int STACK_PRE_SHUTTER_WAIT_TIME;
+extern int STACK_POST_SHUTTER_WAIT_TIME;
+extern int STACK_SHUTTERS_PER_STEP;
+extern int STACK_STEP_SIZE;
+extern String STACK_MOVEMENT_DIRECTION;
+extern int STACK_NUMBER_OF_STEPS_TO_TAKE;
+extern String STACK_RETURN_TO_START_POSITION;
 
 #endif

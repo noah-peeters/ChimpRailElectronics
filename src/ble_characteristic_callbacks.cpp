@@ -1,5 +1,4 @@
 #include "settings.h"
-#include "io_functions.h"
 #include "ble_characteristic_callbacks.h"
 
 void StepMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
@@ -55,89 +54,13 @@ void ContinuousMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
     }
 }
 
-TaskHandle_t STACK_IN_PROGRESS_TASK;
-typedef struct Data_t
-{
-    int preShutterWaitTime;
-    int postShutterWaitTime;
-    int shuttersPerStep;
-    int stepSize;
-    String movementDirection;
-    int numberOfStepsToTake;
-    String returnToStartPosition;
-
-} GenericData_t;
-
-// TODO: Implement Task Scheduler
-Task stackingLoopTask(TASK_ONCE, &stackingLoop);
-// Task stackingLoopTask(5000, TASK_ONCE, &stackingLoop);
-
-void stackingLoop(void *xStruct)
-{
-    Serial.println("Started stacking on a new thread!");
-
-    GenericData_t *params = (GenericData_t *)xStruct;
-
-    Serial.println(params->numberOfStepsToTake);
-
-    // Start stacking loop
-    int numberOfStepsTaken = 0; // Keep track of amount of steps taken (for stopping on request)
-    for (int i = 1; i <= params->numberOfStepsToTake; i++)
-    {
-        Serial.println("Step" + String(i));
-        // Take picture(s)
-        takePictures(params->shuttersPerStep);
-
-        // Move rail forwards
-        delay(params->postShutterWaitTime * 1000);
-        if (params->movementDirection == "FWD")
-        {
-            STEPPER_MOTOR.move(params->stepSize);
-        }
-        else if (params->movementDirection == "BCK")
-        {
-            STEPPER_MOTOR.move(-params->stepSize);
-        }
-        numberOfStepsTaken += 1;
-        delay(params->preShutterWaitTime * 1000);
-    }
-
-    // Return to start position
-    if (params->returnToStartPosition == "true")
-    {
-        Serial.println("Return to start position");
-        if (params->movementDirection == "FWD")
-        {
-            STEPPER_MOTOR.move(-params->stepSize * numberOfStepsTaken);
-        }
-        else if (params->movementDirection == "BCK")
-        {
-            STEPPER_MOTOR.move(params->stepSize * numberOfStepsTaken);
-        }
-    }
-    vTaskDelete(NULL);
-}
-
-// TODO: Don't yield inside callback
 void StartStackingCallback::onWrite(BLECharacteristic *pCharacteristic)
 {
     String stringValue = pCharacteristic->getValue().c_str();
     Serial.println(stringValue);
 
-    // Vars that get extracted from received msg
-    int preShutterWaitTime;
-    int postShutterWaitTime;
-    int shuttersPerStep;
-    int stepSize;
-    String movementDirection;
-    int numberOfStepsToTake;
-    String returnToStartPosition;
-
     // Stop currently running stacking loop
-    if (STACK_IN_PROGRESS_TASK != NULL)
-    {
-        vTaskDelete(STACK_IN_PROGRESS_TASK);
-    }
+    STACK_PROGRESS_STATE = "";
 
     // TODO: Stop stacking button in app will send "STOP"
     if (stringValue.length() > 0 && stringValue != "STOP")
@@ -160,7 +83,7 @@ void StartStackingCallback::onWrite(BLECharacteristic *pCharacteristic)
                 int result = commandValue.toInt();
                 if (result != 0)
                 {
-                    preShutterWaitTime = result;
+                    STACK_PRE_SHUTTER_WAIT_TIME = result;
                 }
             }
             else if (commandId == "PST")
@@ -169,7 +92,7 @@ void StartStackingCallback::onWrite(BLECharacteristic *pCharacteristic)
                 int result = commandValue.toInt();
                 if (result != 0)
                 {
-                    postShutterWaitTime = result;
+                    STACK_POST_SHUTTER_WAIT_TIME = result;
                 }
             }
             else if (commandId == "STP")
@@ -178,7 +101,7 @@ void StartStackingCallback::onWrite(BLECharacteristic *pCharacteristic)
                 int result = commandValue.toInt();
                 if (result != 0)
                 {
-                    shuttersPerStep = result;
+                    STACK_SHUTTERS_PER_STEP = result;
                 }
             }
             else if (commandId == "STS")
@@ -187,13 +110,13 @@ void StartStackingCallback::onWrite(BLECharacteristic *pCharacteristic)
                 int result = commandValue.toInt();
                 if (result != 0)
                 {
-                    stepSize = result;
+                    STACK_STEP_SIZE = result;
                 }
             }
             else if (commandId == "DIR")
             {
                 // Movement direction
-                movementDirection = commandValue;
+                STACK_MOVEMENT_DIRECTION = commandValue;
             }
             else if (commandId == "NST")
             {
@@ -201,13 +124,13 @@ void StartStackingCallback::onWrite(BLECharacteristic *pCharacteristic)
                 int result = commandValue.toInt();
                 if (result != 0)
                 {
-                    numberOfStepsToTake = result;
+                    STACK_NUMBER_OF_STEPS_TO_TAKE = result;
                 }
             }
             else if (commandId == "RTS")
             {
                 // Return to start position
-                returnToStartPosition = commandValue;
+                STACK_RETURN_TO_START_POSITION = commandValue;
             }
             previousSemicolonIndex = currentSemicolonIndex;
         }
@@ -216,29 +139,13 @@ void StartStackingCallback::onWrite(BLECharacteristic *pCharacteristic)
     {
         // Invalid data; user likely wanted to stop stacking
         Serial.println("Invalid data!");
+        STACK_PROGRESS_STATE = "StopStacking";
         return;
     }
 
-    if (preShutterWaitTime && postShutterWaitTime && shuttersPerStep && stepSize && movementDirection && numberOfStepsToTake && returnToStartPosition)
+    if (STACK_PRE_SHUTTER_WAIT_TIME && STACK_POST_SHUTTER_WAIT_TIME && STACK_SHUTTERS_PER_STEP &&
+        STACK_STEP_SIZE && STACK_MOVEMENT_DIRECTION && STACK_NUMBER_OF_STEPS_TO_TAKE && STACK_RETURN_TO_START_POSITION)
     {
-        TASK_RUNNER.addTask(stackingLoopTask);
-
-        // Convert strings to character arrays
-        // char *movementDirectionChar = movementDirection.c_str();
-        // char *returnToStartPositionChar = returnToStartPosition.c_str();
-        GenericData_t stackingParams = {
-            preShutterWaitTime,
-            postShutterWaitTime,
-            shuttersPerStep,
-            stepSize,
-            movementDirection,
-            numberOfStepsToTake,
-            returnToStartPosition};
-
-        int taskPriority = 4;
-        int coreId = 0;
-        Serial.println(numberOfStepsToTake);
-        Serial.println("Create stacking loop");
-        xTaskCreatePinnedToCore(stackingLoop, "StackingLoopTask", 10000, (void *)&stackingParams, taskPriority, &STACK_IN_PROGRESS_TASK, coreId);
+        STACK_PROGRESS_STATE = "TakePictures";
     }
 }
