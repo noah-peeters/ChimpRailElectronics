@@ -62,106 +62,104 @@ void StartStackingCallback::onWrite(BLECharacteristic *pCharacteristic)
     // Stop currently running stacking loop
     STACK_PROGRESS_STATE = "";
 
-    // TODO: Stop stacking button in app will send "STOP"
-    if (stringValue.length() > 0 && stringValue != "STOP")
+    if (stringValue.length() > 0)
     {
-        // Extract data
-        int previousSemicolonIndex = -1; // Start on "-1" b/c of +1
-        for (int i = 0; i <= stringValue.length(); i++)
+        if (stringValue == "Stop")
         {
-            int currentSemicolonIndex = stringValue.indexOf(";", previousSemicolonIndex + 1);
+            // Invalid data; user likely wanted to stop stacking
+            STACK_PROGRESS_STATE = "StopStacking";
+            return;
+        }
+        else
+        {
+            // Extract data
+            int previousSemicolonIndex = -1; // Start on "-1" b/c of +1
+            for (int i = 0; i <= stringValue.length(); i++)
+            {
+                int currentSemicolonIndex = stringValue.indexOf(";", previousSemicolonIndex + 1);
 
-            int start_index = previousSemicolonIndex + 1;
-            // Command ID is always 3 chars long (ex. "FWD", "BCK", ...)
-            String commandId = stringValue.substring(start_index, start_index + 3);
-            // Command value is all the next characters upto (excluding) the semicolon
-            String commandValue = stringValue.substring(start_index + 3, currentSemicolonIndex);
+                int start_index = previousSemicolonIndex + 1;
+                // Command ID is always 3 chars long (ex. "FWD", "BCK", ...)
+                String commandId = stringValue.substring(start_index, start_index + 3);
+                // Command value is all the next characters upto (excluding) the semicolon
+                String commandValue = stringValue.substring(start_index + 3, currentSemicolonIndex);
 
-            if (commandId == "PRE")
-            {
-                // Pre-shutter wait time
-                int result = commandValue.toInt();
-                if (result != 0)
+                if (commandId == "PRE")
                 {
-                    STACK_PRE_SHUTTER_WAIT_TIME = result;
+                    // Pre-shutter wait time
+                    int result = commandValue.toInt();
+                    if (result != 0)
+                    {
+                        STACK_PRE_SHUTTER_WAIT_TIME = result;
+                    }
                 }
-            }
-            else if (commandId == "PST")
-            {
-                // Post-shutter wait time
-                int result = commandValue.toInt();
-                if (result != 0)
+                else if (commandId == "PST")
                 {
-                    STACK_POST_SHUTTER_WAIT_TIME = result;
+                    // Post-shutter wait time
+                    int result = commandValue.toInt();
+                    if (result != 0)
+                    {
+                        STACK_POST_SHUTTER_WAIT_TIME = result;
+                    }
                 }
-            }
-            else if (commandId == "STP")
-            {
-                // Shutters per step
-                int result = commandValue.toInt();
-                if (result != 0)
+                else if (commandId == "STP")
                 {
-                    STACK_SHUTTERS_PER_STEP = result;
+                    // Shutters per step
+                    int result = commandValue.toInt();
+                    if (result != 0)
+                    {
+                        STACK_SHUTTERS_PER_STEP = result;
+                    }
                 }
-            }
-            else if (commandId == "STS")
-            {
-                // Stepsize
-                int result = commandValue.toInt();
-                if (result != 0)
+                else if (commandId == "STS")
                 {
-                    STACK_STEP_SIZE = result;
+                    // Stepsize
+                    int result = commandValue.toInt();
+                    if (result != 0)
+                    {
+                        STACK_STEP_SIZE = result;
+                    }
                 }
-            }
-            else if (commandId == "DIR")
-            {
-                // Movement direction
-                STACK_MOVEMENT_DIRECTION = commandValue;
-            }
-            else if (commandId == "SPS")
-            {
-                // Stack start position
-                int result = commandValue.toInt();
-                if (result != 0)
+                else if (commandId == "DIR")
                 {
-                    STACK_START_POSITION = result;
+                    // Movement direction
+                    STACK_MOVEMENT_DIRECTION = commandValue;
                 }
-            }
-            else if (commandId == "NST")
-            {
-                // Number of steps to take
-                int result = commandValue.toInt();
-                if (result != 0)
+                else if (commandId == "SPS")
                 {
-                    STACK_NUMBER_OF_STEPS_TO_TAKE = result;
+                    // Stack start position
+                    int result = commandValue.toInt();
+                    if (result != 0)
+                    {
+                        STACK_START_POSITION = result;
+                    }
                 }
-            }
-            else if (commandId == "RTS")
-            {
-                // Return to start position
-                if (commandValue == "false")
+                else if (commandId == "NST")
                 {
-                    STACK_RETURN_TO_START_POSITION = false;
+                    // Number of steps to take
+                    int result = commandValue.toInt();
+                    if (result != 0)
+                    {
+                        STACK_NUMBER_OF_STEPS_TO_TAKE = result;
+                    }
                 }
-                else if (commandValue == "true")
+                else if (commandId == "RTS")
                 {
-                    STACK_RETURN_TO_START_POSITION = true;
+                    // Return to start position
+                    if (commandValue == "false")
+                    {
+                        STACK_RETURN_TO_START_POSITION = false;
+                    }
+                    else if (commandValue == "true")
+                    {
+                        STACK_RETURN_TO_START_POSITION = true;
+                    }
                 }
+                previousSemicolonIndex = currentSemicolonIndex;
             }
-            previousSemicolonIndex = currentSemicolonIndex;
         }
     }
-    else
-    {
-        // Invalid data; user likely wanted to stop stacking
-        Serial.println("Invalid data!");
-        STACK_PROGRESS_STATE = "StopStacking";
-        return;
-    }
 
-    if (STACK_PRE_SHUTTER_WAIT_TIME && STACK_POST_SHUTTER_WAIT_TIME && STACK_SHUTTERS_PER_STEP &&
-        STACK_STEP_SIZE && STACK_MOVEMENT_DIRECTION && STACK_NUMBER_OF_STEPS_TO_TAKE && STACK_RETURN_TO_START_POSITION != NULL)
-    {
-        STACK_PROGRESS_STATE = "MoveToStart";
-    }
+    // Start stacking process
+    STACK_PROGRESS_STATE = "MoveToStart";
 }

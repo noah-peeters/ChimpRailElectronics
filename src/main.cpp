@@ -29,9 +29,9 @@ bool STACK_RETURN_TO_START_POSITION = true;
 // Global variables
 // --------
 static BLEServer *g_pServer = nullptr;
-static BLECharacteristic *g_pCharRead = nullptr;
 static BLECharacteristic *g_pCharWrite = nullptr;
 static BLECharacteristic *g_pNotifyCurrentSteps = nullptr;
+static BLECharacteristic *g_pNotifyStackingStepsTaken = nullptr;
 static bool g_centralConnected = false;
 static std::string g_cmdLine;
 
@@ -54,82 +54,7 @@ class MyServerCallbacks : public BLEServerCallbacks
     }
 };
 
-class MyCharPrintingCallbacks : public BLECharacteristicCallbacks
-{
-public:
-    explicit MyCharPrintingCallbacks(const char *name) : m_name(name) {}
-
-private:
-    void PrintEvent(const char *event, const char *value)
-    {
-        Serial.print(event);
-        Serial.print("(");
-        Serial.print(m_name.c_str());
-        Serial.print(")");
-        if (value)
-        {
-            Serial.print(" value='");
-            Serial.print(value);
-            Serial.print("'");
-        }
-        Serial.println();
-    }
-
-private:
-    void onRead(BLECharacteristic *pCharacteristic) override
-    {
-        PrintEvent("onRead", pCharacteristic->getValue().c_str());
-    }
-
-    void onWrite(BLECharacteristic *pCharacteristic) override
-    {
-        PrintEvent("onWrite", pCharacteristic->getValue().c_str());
-    }
-
-    void onNotify(BLECharacteristic *pCharacteristic) override
-    {
-        PrintEvent("onNotify", pCharacteristic->getValue().c_str());
-    }
-
-    void onStatus(BLECharacteristic *pCharacteristic, Status status, uint32_t code) override
-    {
-        std::string event("onStatus:");
-        switch (status)
-        {
-        case SUCCESS_INDICATE:
-            event += "SUCCESS_INDICATE";
-            break;
-        case SUCCESS_NOTIFY:
-            event += "SUCCESS_NOTIFY";
-            break;
-        case ERROR_INDICATE_DISABLED:
-            event += "ERROR_INDICATE_DISABLED";
-            break;
-        case ERROR_NOTIFY_DISABLED:
-            event += "ERROR_NOTIFY_DISABLED";
-            break;
-        case ERROR_GATT:
-            event += "ERROR_GATT";
-            break;
-        case ERROR_NO_CLIENT:
-            event += "ERROR_NO_CLIENT";
-            break;
-        case ERROR_INDICATE_TIMEOUT:
-            event += "ERROR_INDICATE_TIMEOUT";
-            break;
-        case ERROR_INDICATE_FAILURE:
-            event += "ERROR_INDICATE_FAILURE";
-            break;
-        }
-        event += ":";
-        event += String(code).c_str();
-        PrintEvent(event.c_str(), nullptr);
-    }
-
-private:
-    std::string m_name;
-};
-
+// Home motor
 void homeMotor()
 {
     pinMode(HOME_LIMIT_SWITCH_PIN, INPUT);
@@ -162,12 +87,7 @@ void sendMotorPositionUpdate(void *pvParameters)
     Serial.println(taskMessage);
     while (true)
     {
-        if (g_centralConnected == false)
-        {
-            // Reset value so an update is sent after device connects
-            g_pNotifyCurrentSteps->setValue("");
-        }
-        else
+        if (g_centralConnected == true)
         {
             // Send new position to device (if changed during interval)
             char newValue[7];
@@ -186,9 +106,12 @@ void setup()
 {
     Serial.begin(115200);
 
+    // Motor setup
+    STEPPER_MOTOR.setEnablePin(MOTOR_ENA_PIN);
+    STEPPER_MOTOR.setPinsInverted(false, false, true); // Enable for TB6600 driver is a "LOW" signal
+    STEPPER_MOTOR.enableOutputs();
     STEPPER_MOTOR.setMaxSpeed(MOTOR_MAX_SPEED);
     STEPPER_MOTOR.setAcceleration(MOTOR_MAX_ACCELERATION);
-    // Home stepper motor
     homeMotor();
 
     // BLE peripheral setup
@@ -196,80 +119,65 @@ void setup()
     g_pServer = BLEDevice::createServer();
     g_pServer->setCallbacks(new MyServerCallbacks());
     BLEService *pService = g_pServer->createService(SERVICE_UUID);
-    // Step movement write
+    // Listen to step movement write
     {
-        uint32_t propertyFlags = BLECharacteristic::PROPERTY_WRITE;
-        BLECharacteristic *pCharWrite = pService->createCharacteristic(STEP_MOVEMENT_WRITE_UUID, propertyFlags);
+        BLECharacteristic *pCharWrite = pService->createCharacteristic(STEP_MOVEMENT_WRITE_UUID, BLECharacteristic::PROPERTY_WRITE);
         pCharWrite->setCallbacks(new StepMovementCallbacks);
         pCharWrite->setValue("");
         g_pCharWrite = pCharWrite;
     }
 
-    // Continuous movement write
+    // Listen to continuous movement write
     {
-        uint32_t propertyFlags = BLECharacteristic::PROPERTY_WRITE;
-        BLECharacteristic *pCharWrite = pService->createCharacteristic(CONTINUOUS_MOVEMENT_WRITE_UUID, propertyFlags);
+        BLECharacteristic *pCharWrite = pService->createCharacteristic(CONTINUOUS_MOVEMENT_WRITE_UUID, BLECharacteristic::PROPERTY_WRITE);
         pCharWrite->setCallbacks(new ContinuousMovementCallbacks());
         pCharWrite->setValue("");
         g_pCharWrite = pCharWrite;
     }
 
-    // Start stacking write
+    // Listen to start stacking write
     {
-        uint32_t propertyFlags = BLECharacteristic::PROPERTY_WRITE;
-        BLECharacteristic *pCharWrite = pService->createCharacteristic(START_STACKING_WRTIE_UUID, propertyFlags);
+        BLECharacteristic *pCharWrite = pService->createCharacteristic(START_STACKING_WRTIE_UUID, BLECharacteristic::PROPERTY_WRITE);
         pCharWrite->setCallbacks(new StartStackingCallback());
         pCharWrite->setValue("");
         g_pCharWrite = pCharWrite;
     }
 
-    // Characteristic for indicate
+    // Notify device about current motor position
     {
-        uint32_t propertyFlags = BLECharacteristic::PROPERTY_NOTIFY;
-        BLECharacteristic *pNotifyCurrentSteps = pService->createCharacteristic(NOTIFY_STEPS_UUID, propertyFlags);
-        pNotifyCurrentSteps->setCallbacks(new MyCharPrintingCallbacks("CharIndicate"));
-        // pNotifyCurrentSteps->addDescriptor(new BLEDescriptor(NOTIFY_STEPS_DESCRIPTOR_UUID));
+        BLECharacteristic *pNotifyCurrentSteps = pService->createCharacteristic(NOTIFY_STEPS_UUID, BLECharacteristic::PROPERTY_NOTIFY);
         pNotifyCurrentSteps->addDescriptor(new BLE2902());
         pNotifyCurrentSteps->setValue("");
         g_pNotifyCurrentSteps = pNotifyCurrentSteps;
     }
 
-    // TODO: Implement/remove following
-
-    // Characteristic for read
+    // Notify device about current stacking state
     {
-        uint32_t propertyFlags = BLECharacteristic::PROPERTY_READ;
-        BLECharacteristic *pCharRead = pService->createCharacteristic(CHAR_READ_UUID, propertyFlags);
-        pCharRead->setCallbacks(new MyCharPrintingCallbacks("CharRead"));
-        pCharRead->setValue("Ready to be used!");
-        g_pCharRead = pCharRead;
+        BLECharacteristic *pNotifyStackingStepsTaken = pService->createCharacteristic(NOTIFY_STACKING_STEPS_TAKEN_UUID, BLECharacteristic::PROPERTY_NOTIFY);
+        pNotifyStackingStepsTaken->addDescriptor(new BLE2902());
+        pNotifyStackingStepsTaken->setValue("");
+        g_pNotifyStackingStepsTaken = pNotifyStackingStepsTaken;
     }
 
     pService->start();
     BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(SERVICE_UUID);
     pAdvertising->setScanResponse(true);
-    // this fixes iPhone connection issue (don't know how it works)
-    {
-        pAdvertising->setMinPreferred(0x06);
-        pAdvertising->setMinPreferred(0x12);
-    }
     BLEDevice::startAdvertising();
 
-    // Setup motor position update loop (other thread so it doesn't interfere with regular motor updates)
+    // Setup motor position update loop (on other core so it doesn't interfere with regular motor updates)
     xTaskCreatePinnedToCore(
-        sendMotorPositionUpdate,   // Function to implement the task
-        "SendMotorPositionUpdate", // Name of the task
-        10000,                     // Stack size in words
-        NULL,                      // Task input parameter
-        0,                         // Priority of the task
-        NULL,                      // Task handle.
-        0);                        // Core where the task should run
-
-    Serial.println("BLE Peripheral setup done, started advertising");
+        sendMotorPositionUpdate,   // Function of task
+        "SendMotorPositionUpdate", // Name of task
+        10000,                     // Stack size (in words)
+        NULL,                      // Input param
+        0,                         // Task priority
+        NULL,                      // Task handle
+        0);                        // Core
 }
 
 // Main event loop
+bool motorEnabled = false;
 unsigned long previousTaskTime = 0;
 int stepsTakenSinceStart = 0;
 int picturesTakenOnThisStep = 0;
@@ -294,7 +202,14 @@ void loop()
             // Take a picture
             if (millis() - previousTaskTime > STACK_PRE_SHUTTER_WAIT_TIME * 1000)
             {
-                Serial.println("Take picture");
+                // Send update to device (new step)
+                char newValue[7];
+                itoa(stepsTakenSinceStart, newValue, 10);
+                // std::string newValue((char*)&stepsTakenSinceStart, 7);
+                g_pNotifyStackingStepsTaken->setValue(newValue);
+                g_pNotifyStackingStepsTaken->notify();
+                Serial.println(newValue);
+
                 digitalWrite(SHUTTER_PIN, HIGH);
                 delay(50); // TODO: Check if delay can be smaller (not super important)
                 digitalWrite(SHUTTER_PIN, LOW);
@@ -353,6 +268,10 @@ void loop()
                     STEPPER_MOTOR.move(STACK_STEP_SIZE * stepsTakenSinceStart);
                 }
             }
+            // Send stack ended
+            g_pNotifyStackingStepsTaken->setValue("");
+            g_pNotifyStackingStepsTaken->notify();
+
             // Reset vars
             previousTaskTime = 0;
             stepsTakenSinceStart = 0;
@@ -382,9 +301,21 @@ void loop()
             STEPPER_MOTOR.moveTo(0);
         }
     }
+
     // Update motor position (if needed)
-    if (abs(STEPPER_MOTOR.targetPosition() - STEPPER_MOTOR.currentPosition()) > 0)
+    if (STEPPER_MOTOR.distanceToGo() != 0)
     {
+        if (motorEnabled == false)
+        {
+            STEPPER_MOTOR.enableOutputs();
+            motorEnabled = true;
+        }
         STEPPER_MOTOR.run();
+    }
+    else
+    {
+        // Disable driver
+        STEPPER_MOTOR.disableOutputs();
+        motorEnabled = false;
     }
 }
