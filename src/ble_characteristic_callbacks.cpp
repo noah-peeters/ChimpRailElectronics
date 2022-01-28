@@ -118,6 +118,15 @@ void StartStackingCallback::onWrite(BLECharacteristic *pCharacteristic)
                 // Movement direction
                 STACK_MOVEMENT_DIRECTION = commandValue;
             }
+            else if (commandId == "SPS")
+            {
+                // Stack start position
+                int result = commandValue.toInt();
+                if (result != 0)
+                {
+                    STACK_START_POSITION = result;
+                }
+            }
             else if (commandId == "NST")
             {
                 // Number of steps to take
@@ -130,7 +139,14 @@ void StartStackingCallback::onWrite(BLECharacteristic *pCharacteristic)
             else if (commandId == "RTS")
             {
                 // Return to start position
-                STACK_RETURN_TO_START_POSITION = commandValue;
+                if (commandValue == "false")
+                {
+                    STACK_RETURN_TO_START_POSITION = false;
+                }
+                else if (commandValue == "true")
+                {
+                    STACK_RETURN_TO_START_POSITION = true;
+                }
             }
             previousSemicolonIndex = currentSemicolonIndex;
         }
@@ -144,8 +160,8 @@ void StartStackingCallback::onWrite(BLECharacteristic *pCharacteristic)
     }
 
     if (STACK_PRE_SHUTTER_WAIT_TIME && STACK_POST_SHUTTER_WAIT_TIME && STACK_SHUTTERS_PER_STEP &&
-        STACK_STEP_SIZE && STACK_MOVEMENT_DIRECTION && STACK_NUMBER_OF_STEPS_TO_TAKE && STACK_RETURN_TO_START_POSITION)
+        STACK_STEP_SIZE && STACK_MOVEMENT_DIRECTION && STACK_NUMBER_OF_STEPS_TO_TAKE && STACK_RETURN_TO_START_POSITION != NULL)
     {
-        STACK_PROGRESS_STATE = "TakePictures";
+        STACK_PROGRESS_STATE = "MoveToStart";
     }
 }

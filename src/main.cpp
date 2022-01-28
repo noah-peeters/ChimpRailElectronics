@@ -21,8 +21,9 @@ int STACK_POST_SHUTTER_WAIT_TIME = 0;
 int STACK_SHUTTERS_PER_STEP = 0;
 int STACK_STEP_SIZE = 0;
 String STACK_MOVEMENT_DIRECTION = "";
+int STACK_START_POSITION = 0;
 int STACK_NUMBER_OF_STEPS_TO_TAKE = 0;
-String STACK_RETURN_TO_START_POSITION = "";
+bool STACK_RETURN_TO_START_POSITION = true;
 
 // --------
 // Global variables
@@ -257,13 +258,13 @@ void setup()
 
     // Setup motor position update loop (other thread so it doesn't interfere with regular motor updates)
     xTaskCreatePinnedToCore(
-        sendMotorPositionUpdate,   /* Function to implement the task */
-        "SendMotorPositionUpdate", /* Name of the task */
-        10000,                     /* Stack size in words */
-        NULL,                      /* Task input parameter */
-        0,                         /* Priority of the task */
-        NULL,                      /* Task handle. */
-        0);                        /* Core where the task should run */
+        sendMotorPositionUpdate,   // Function to implement the task
+        "SendMotorPositionUpdate", // Name of the task
+        10000,                     // Stack size in words
+        NULL,                      // Task input parameter
+        0,                         // Priority of the task
+        NULL,                      // Task handle.
+        0);                        // Core where the task should run
 
     Serial.println("BLE Peripheral setup done, started advertising");
 }
@@ -277,7 +278,18 @@ void loop()
     // Process next stacking operation
     if (STACK_PROGRESS_STATE.length() > 0)
     {
-        if (STACK_PROGRESS_STATE == "TakePictures")
+        if (STACK_PROGRESS_STATE == "MoveToStart")
+        {
+            // Move to start position of stack
+            STEPPER_MOTOR.moveTo(STACK_START_POSITION);
+
+            if (STEPPER_MOTOR.currentPosition() == STACK_START_POSITION)
+            {
+                // Position reached; continue stacking process
+                STACK_PROGRESS_STATE = "TakePictures";
+            }
+        }
+        else if (STACK_PROGRESS_STATE == "TakePictures")
         {
             // Take a picture
             if (millis() - previousTaskTime > STACK_PRE_SHUTTER_WAIT_TIME * 1000)
@@ -297,7 +309,7 @@ void loop()
                 }
             }
         }
-        if (STACK_PROGRESS_STATE == "MoveRail")
+        else if (STACK_PROGRESS_STATE == "MoveRail")
         {
             // Move rail
             if (millis() - previousTaskTime > STACK_POST_SHUTTER_WAIT_TIME * 1000)
@@ -328,8 +340,7 @@ void loop()
         if (STACK_PROGRESS_STATE == "StopStacking")
         {
             // Stop stacking process
-            // TODO: Change "STACK_RETURN_TO_START_POSITION" to be a bool instead of a string
-            if (STACK_RETURN_TO_START_POSITION == "true" && stepsTakenSinceStart > 0)
+            if (STACK_RETURN_TO_START_POSITION == true && stepsTakenSinceStart > 0)
             {
                 // Move to start position (if asked by user)
                 Serial.println("Return to start position");
@@ -342,7 +353,6 @@ void loop()
                     STEPPER_MOTOR.move(STACK_STEP_SIZE * stepsTakenSinceStart);
                 }
             }
-
             // Reset vars
             previousTaskTime = 0;
             stepsTakenSinceStart = 0;
@@ -355,7 +365,7 @@ void loop()
             STACK_STEP_SIZE = 0;
             STACK_MOVEMENT_DIRECTION = "";
             STACK_NUMBER_OF_STEPS_TO_TAKE = 0;
-            STACK_RETURN_TO_START_POSITION = "";
+            STACK_RETURN_TO_START_POSITION = true;
         }
     }
 
