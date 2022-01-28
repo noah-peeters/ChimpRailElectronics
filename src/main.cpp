@@ -30,7 +30,7 @@ String STACK_RETURN_TO_START_POSITION = "";
 static BLEServer *g_pServer = nullptr;
 static BLECharacteristic *g_pCharRead = nullptr;
 static BLECharacteristic *g_pCharWrite = nullptr;
-static BLECharacteristic *g_pCharIndicate = nullptr;
+static BLECharacteristic *g_pNotifyCurrentSteps = nullptr;
 static bool g_centralConnected = false;
 static std::string g_cmdLine;
 
@@ -153,6 +153,34 @@ void homeMotor()
     STEPPER_MOTOR.setCurrentPosition(0);
 }
 
+// Infinite loop sending motor position update
+void sendMotorPositionUpdate(void *pvParameters)
+{
+    String taskMessage = "Task running on core ";
+    taskMessage = taskMessage + xPortGetCoreID();
+    Serial.println(taskMessage);
+    while (true)
+    {
+        if (g_centralConnected == false)
+        {
+            // Reset value so an update is sent after device connects
+            g_pNotifyCurrentSteps->setValue("");
+        }
+        else
+        {
+            // Send new position to device (if changed during interval)
+            char newValue[7];
+            itoa(STEPPER_MOTOR.currentPosition(), newValue, 10);
+            if (g_pNotifyCurrentSteps->getValue() != newValue)
+            {
+                g_pNotifyCurrentSteps->setValue(newValue);
+                g_pNotifyCurrentSteps->notify();
+            }
+        }
+        delay(SEND_POSITION_UPDATE_INTERVAL);
+    }
+}
+
 // --------
 // Application lifecycle: setup & loop
 // --------
@@ -170,16 +198,6 @@ void setup()
     g_pServer = BLEDevice::createServer();
     g_pServer->setCallbacks(new MyServerCallbacks());
     BLEService *pService = g_pServer->createService(SERVICE_UUID);
-
-    // Characteristic for read
-    {
-        uint32_t propertyFlags = BLECharacteristic::PROPERTY_READ;
-        BLECharacteristic *pCharRead = pService->createCharacteristic(CHAR_READ_UUID, propertyFlags);
-        pCharRead->setCallbacks(new MyCharPrintingCallbacks("CharRead"));
-        pCharRead->setValue("Ready to be used!");
-        g_pCharRead = pCharRead;
-    }
-
     // Step movement write
     {
         uint32_t propertyFlags = BLECharacteristic::PROPERTY_WRITE;
@@ -209,12 +227,24 @@ void setup()
 
     // Characteristic for indicate
     {
-        uint32_t propertyFlags = BLECharacteristic::PROPERTY_INDICATE;
-        BLECharacteristic *pCharIndicate = pService->createCharacteristic(CHAR_INDICATE_UUID, propertyFlags);
-        pCharIndicate->setCallbacks(new MyCharPrintingCallbacks("CharIndicate"));
-        pCharIndicate->addDescriptor(new BLE2902());
-        pCharIndicate->setValue("");
-        g_pCharIndicate = pCharIndicate;
+        uint32_t propertyFlags = BLECharacteristic::PROPERTY_NOTIFY;
+        BLECharacteristic *pNotifyCurrentSteps = pService->createCharacteristic(NOTIFY_STEPS_UUID, propertyFlags);
+        pNotifyCurrentSteps->setCallbacks(new MyCharPrintingCallbacks("CharIndicate"));
+        // pNotifyCurrentSteps->addDescriptor(new BLEDescriptor(NOTIFY_STEPS_DESCRIPTOR_UUID));
+        pNotifyCurrentSteps->addDescriptor(new BLE2902());
+        pNotifyCurrentSteps->setValue("");
+        g_pNotifyCurrentSteps = pNotifyCurrentSteps;
+    }
+
+    // TODO: Implement/remove following
+
+    // Characteristic for read
+    {
+        uint32_t propertyFlags = BLECharacteristic::PROPERTY_READ;
+        BLECharacteristic *pCharRead = pService->createCharacteristic(CHAR_READ_UUID, propertyFlags);
+        pCharRead->setCallbacks(new MyCharPrintingCallbacks("CharRead"));
+        pCharRead->setValue("Ready to be used!");
+        g_pCharRead = pCharRead;
     }
 
     pService->start();
@@ -227,6 +257,16 @@ void setup()
         pAdvertising->setMinPreferred(0x12);
     }
     BLEDevice::startAdvertising();
+
+    // Setup motor position update loop (other thread so it doesn't interfere with regular motor updates)
+    xTaskCreatePinnedToCore(
+        sendMotorPositionUpdate,   /* Function to implement the task */
+        "SendMotorPositionUpdate", /* Name of the task */
+        10000,                     /* Stack size in words */
+        NULL,                      /* Task input parameter */
+        0,                         /* Priority of the task */
+        NULL,                      /* Task handle. */
+        0);                        /* Core where the task should run */
 
     Serial.println("BLE Peripheral setup done, started advertising");
 }
@@ -322,9 +362,10 @@ void loop()
         }
     }
 
-    // Change target if not in valid range
+    // Move motor
     if (STEPPER_MOTOR.targetPosition())
     {
+        // Change target if not in valid range
         if (STEPPER_MOTOR.targetPosition() > MAX_STEPS_LIMIT)
         {
             STEPPER_MOTOR.moveTo(MAX_STEPS_LIMIT);
@@ -334,8 +375,7 @@ void loop()
             STEPPER_MOTOR.moveTo(0);
         }
     }
-
-    // Update motor (if needed)
+    // Update motor position (if needed)
     if (abs(STEPPER_MOTOR.targetPosition() - STEPPER_MOTOR.currentPosition()) > 0)
     {
         STEPPER_MOTOR.run();

@@ -12,9 +12,10 @@
 #define SHUTTER_PIN 16
 
 // Other constants
-#define MAX_STEPS_LIMIT 210000       // Max amount of steps to allow (move from absolute 0 to end of rail)
-#define MOTOR_MAX_SPEED 16000        // Max speed of motor
-#define MOTOR_MAX_ACCELERATION 16000 // Max acceleration of motor
+#define MAX_STEPS_LIMIT 210000            // Max amount of steps to allow (move from absolute 0 to end of rail)
+#define MOTOR_MAX_SPEED 16000             // Max speed of motor
+#define MOTOR_MAX_ACCELERATION 16000      // Max acceleration of motor
+#define SEND_POSITION_UPDATE_INTERVAL 150 // Time interval for sending position update to controller (ms)
 
 // Bluetooth settings
 #define DEVICE_DISPLAY_NAME "Stacking rail"
@@ -22,10 +23,11 @@
 #define STEP_MOVEMENT_WRITE_UUID "908badf3-fd6b-4eec-b362-2810e97db94e"
 #define CONTINUOUS_MOVEMENT_WRITE_UUID "28c74a57-67cb-4b43-8adf-8776c1dbc475"
 #define START_STACKING_WRTIE_UUID "bed1dd25-79f2-4ce2-a6fa-000471efe3a0"
+#define NOTIFY_STEPS_UUID "d2f362f4-6542-4b13-be5e-8c81d423a347"
+#define NOTIFY_STEPS_DESCRIPTOR_UUID "c14b46e2-553a-4664-98b0-653494882964"
 
 // TODO: Remove/replace
 #define CHAR_READ_UUID "f33dee97-d3d8-4fbd-8162-c980133f0c93"
-#define CHAR_INDICATE_UUID "d2f362f4-6542-4b13-be5e-8c81d423a347"
 
 // Shared variables (between multiple files)
 extern AccelStepper STEPPER_MOTOR;
