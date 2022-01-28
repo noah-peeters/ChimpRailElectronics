@@ -171,11 +171,8 @@ void sendMotorPositionUpdate(void *pvParameters)
             // Send new position to device (if changed during interval)
             char newValue[7];
             itoa(STEPPER_MOTOR.currentPosition(), newValue, 10);
-            // if (g_pNotifyCurrentSteps->getValue() != newValue)
-            // {
             g_pNotifyCurrentSteps->setValue(newValue);
             g_pNotifyCurrentSteps->notify();
-            // }
         }
         delay(SEND_POSITION_UPDATE_INTERVAL);
     }
