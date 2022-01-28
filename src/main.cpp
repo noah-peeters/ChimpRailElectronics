@@ -136,7 +136,7 @@ void homeMotor()
     // Move backwards until switch is pressed (if not already pressed)
     if (digitalRead(HOME_LIMIT_SWITCH_PIN) == LOW)
     {
-        STEPPER_MOTOR.move(-100000000);
+        STEPPER_MOTOR.move(-MAX_STEPS_LIMIT * 2);
         while (digitalRead(HOME_LIMIT_SWITCH_PIN) == LOW)
         {
             // Keep moving back
@@ -171,11 +171,11 @@ void sendMotorPositionUpdate(void *pvParameters)
             // Send new position to device (if changed during interval)
             char newValue[7];
             itoa(STEPPER_MOTOR.currentPosition(), newValue, 10);
-            if (g_pNotifyCurrentSteps->getValue() != newValue)
-            {
-                g_pNotifyCurrentSteps->setValue(newValue);
-                g_pNotifyCurrentSteps->notify();
-            }
+            // if (g_pNotifyCurrentSteps->getValue() != newValue)
+            // {
+            g_pNotifyCurrentSteps->setValue(newValue);
+            g_pNotifyCurrentSteps->notify();
+            // }
         }
         delay(SEND_POSITION_UPDATE_INTERVAL);
     }

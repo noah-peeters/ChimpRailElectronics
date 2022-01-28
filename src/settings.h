@@ -15,7 +15,7 @@
 #define MAX_STEPS_LIMIT 210000            // Max amount of steps to allow (move from absolute 0 to end of rail)
 #define MOTOR_MAX_SPEED 16000             // Max speed of motor
 #define MOTOR_MAX_ACCELERATION 16000      // Max acceleration of motor
-#define SEND_POSITION_UPDATE_INTERVAL 150 // Time interval for sending position update to controller (ms)
+#define SEND_POSITION_UPDATE_INTERVAL 100 // Time interval for sending position update to device (ms)
 
 // Bluetooth settings
 #define DEVICE_DISPLAY_NAME "Stacking rail"
