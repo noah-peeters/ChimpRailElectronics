@@ -204,7 +204,7 @@ void loop()
             {
                 // Send update to device (new step)
                 char newValue[7];
-                itoa(stepsTakenSinceStart, newValue, 10);
+                itoa(stepsTakenSinceStart + 1, newValue, 10);
                 // std::string newValue((char*)&stepsTakenSinceStart, 7);
                 g_pNotifyStackingStepsTaken->setValue(newValue);
                 g_pNotifyStackingStepsTaken->notify();
