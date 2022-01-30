@@ -3,8 +3,12 @@
 
 void StepMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
 {
+    if (STACK_PROGRESS_STATE != "")
+    {
+        return;
+    }
+    
     String stringValue = pCharacteristic->getValue().c_str();
-
     if (stringValue.length() > 0)
     {
         String commandName = stringValue.substring(0, 3);
@@ -24,8 +28,12 @@ void StepMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
 
 void ContinuousMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
 {
-    String stringValue = pCharacteristic->getValue().c_str();
+    if (STACK_PROGRESS_STATE != "")
+    {
+        return;
+    }
 
+    String stringValue = pCharacteristic->getValue().c_str();
     if (stringValue.length() > 0)
     {
         String commandName = stringValue.substring(0, 3);
