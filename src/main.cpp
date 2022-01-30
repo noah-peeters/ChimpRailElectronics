@@ -203,9 +203,11 @@ void loop()
             if (millis() - previousTaskTime > STACK_PRE_SHUTTER_WAIT_TIME * 1000)
             {
                 // Send update to device (new step)
-                char newValue[7];
-                itoa(stepsTakenSinceStart + 1, newValue, 10);
-                // std::string newValue((char*)&stepsTakenSinceStart, 7);
+                String str = String(stepsTakenSinceStart) + ";" + String(STACK_NUMBER_OF_STEPS_TO_TAKE) +
+                             ";" + String(STACK_STEP_SIZE) + ";" +
+                             String(STACK_PRE_SHUTTER_WAIT_TIME * STACK_SHUTTERS_PER_STEP + STACK_POST_SHUTTER_WAIT_TIME);
+                char newValue[100];
+                str.toCharArray(newValue, 100);
                 g_pNotifyStackingStepsTaken->setValue(newValue);
                 g_pNotifyStackingStepsTaken->notify();
                 Serial.println(newValue);
