@@ -106,9 +106,12 @@ void setup()
 {
     Serial.begin(115200);
 
+    pinMode(SHUTTER_PIN, OUTPUT);
+
     // Motor setup
     STEPPER_MOTOR.setEnablePin(MOTOR_ENA_PIN);
-    STEPPER_MOTOR.setPinsInverted(false, false, true); // Enable for TB6600 driver is a "LOW" signal
+    // Change first bool (direction) depending on what pole pair was connected
+    STEPPER_MOTOR.setPinsInverted(true, false, true); // Enable for TB6600 driver is a "LOW" signal
     STEPPER_MOTOR.enableOutputs();
     STEPPER_MOTOR.setMaxSpeed(MOTOR_MAX_SPEED);
     STEPPER_MOTOR.setAcceleration(MOTOR_MAX_ACCELERATION);
@@ -213,7 +216,7 @@ void loop()
                 Serial.println(newValue);
 
                 digitalWrite(SHUTTER_PIN, HIGH);
-                delay(50); // TODO: Check if delay can be smaller (not super important)
+                delay(1000); // TODO: Check if delay can be smaller (not super important)
                 digitalWrite(SHUTTER_PIN, LOW);
 
                 previousTaskTime = millis();

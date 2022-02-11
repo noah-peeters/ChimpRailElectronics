@@ -5,11 +5,11 @@
 #include "AccelStepper.h"
 
 // I/O pins
-#define MOTOR_ENA_PIN 25
-#define MOTOR_DIR_PIN 26
-#define MOTOR_PUL_PIN 27
-#define HOME_LIMIT_SWITCH_PIN 33
-#define SHUTTER_PIN 16
+#define MOTOR_PUL_PIN 21
+#define MOTOR_DIR_PIN 19
+#define MOTOR_ENA_PIN 18
+#define HOME_LIMIT_SWITCH_PIN 4
+#define SHUTTER_PIN 34
 
 // Other constants
 #define MAX_STEPS_LIMIT 210000            // Max amount of steps to allow (move from absolute 0 to end of rail)
