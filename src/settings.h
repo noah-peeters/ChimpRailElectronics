@@ -9,7 +9,7 @@
 #define MOTOR_DIR_PIN 19
 #define MOTOR_ENA_PIN 18
 #define HOME_LIMIT_SWITCH_PIN 4
-#define SHUTTER_PIN 34
+#define SHUTTER_PIN 32
 
 // Other constants
 #define MAX_STEPS_LIMIT 210000            // Max amount of steps to allow (move from absolute 0 to end of rail)

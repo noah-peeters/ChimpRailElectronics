@@ -216,7 +216,7 @@ void loop()
                 Serial.println(newValue);
 
                 digitalWrite(SHUTTER_PIN, HIGH);
-                delay(1000); // TODO: Check if delay can be smaller (not super important)
+                delay(50); // TODO: Check if delay can be smaller (not super important)
                 digitalWrite(SHUTTER_PIN, LOW);
 
                 previousTaskTime = millis();
