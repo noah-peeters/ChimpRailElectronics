@@ -1,13 +1,13 @@
 #include "settings.h"
 #include "ble_characteristic_callbacks.h"
 
-void StepMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
+void StepMovementCallback::onWrite(BLECharacteristic *pCharacteristic)
 {
     if (STACK_PROGRESS_STATE != "")
     {
         return;
     }
-    
+
     String stringValue = pCharacteristic->getValue().c_str();
     if (stringValue.length() > 0)
     {
@@ -26,7 +26,7 @@ void StepMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
     }
 }
 
-void ContinuousMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
+void ContinuousMovementCallback::onWrite(BLECharacteristic *pCharacteristic)
 {
     if (STACK_PROGRESS_STATE != "")
     {
@@ -58,6 +58,26 @@ void ContinuousMovementCallbacks::onWrite(BLECharacteristic *pCharacteristic)
             // Move to start of rail
             STEPPER_MOTOR.moveTo(0);
             Serial.println("Move backwards.");
+        }
+    }
+}
+
+void ShutterReleaseCallback::onWrite(BLECharacteristic *pCharacteristic)
+{
+    if (STACK_PROGRESS_STATE != "")
+    {
+        return;
+    }
+
+    String stringValue = pCharacteristic->getValue().c_str();
+    if (stringValue.length() > 0)
+    {
+        if (stringValue == "true")
+        {
+            // Take picture
+            digitalWrite(SHUTTER_PIN, HIGH);
+            delay(50); // TODO: Check if delay can be smaller (not super important)
+            digitalWrite(SHUTTER_PIN, LOW);
         }
     }
 }

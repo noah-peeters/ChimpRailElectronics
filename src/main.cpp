@@ -125,7 +125,7 @@ void setup()
     // Listen to step movement write
     {
         BLECharacteristic *pCharWrite = pService->createCharacteristic(STEP_MOVEMENT_WRITE_UUID, BLECharacteristic::PROPERTY_WRITE);
-        pCharWrite->setCallbacks(new StepMovementCallbacks);
+        pCharWrite->setCallbacks(new StepMovementCallback);
         pCharWrite->setValue("");
         g_pCharWrite = pCharWrite;
     }
@@ -133,7 +133,7 @@ void setup()
     // Listen to continuous movement write
     {
         BLECharacteristic *pCharWrite = pService->createCharacteristic(CONTINUOUS_MOVEMENT_WRITE_UUID, BLECharacteristic::PROPERTY_WRITE);
-        pCharWrite->setCallbacks(new ContinuousMovementCallbacks());
+        pCharWrite->setCallbacks(new ContinuousMovementCallback());
         pCharWrite->setValue("");
         g_pCharWrite = pCharWrite;
     }
@@ -142,6 +142,14 @@ void setup()
     {
         BLECharacteristic *pCharWrite = pService->createCharacteristic(START_STACKING_WRTIE_UUID, BLECharacteristic::PROPERTY_WRITE);
         pCharWrite->setCallbacks(new StartStackingCallback());
+        pCharWrite->setValue("");
+        g_pCharWrite = pCharWrite;
+    }
+
+    // Listen to shutter release write
+    {
+        BLECharacteristic *pCharWrite = pService->createCharacteristic(TAKE_PICTURE_UUID, BLECharacteristic::PROPERTY_WRITE);
+        pCharWrite->setCallbacks(new ShutterReleaseCallback());
         pCharWrite->setValue("");
         g_pCharWrite = pCharWrite;
     }
@@ -168,7 +176,7 @@ void setup()
     pAdvertising->setScanResponse(true);
     BLEDevice::startAdvertising();
 
-    // Setup motor position update loop (on other core so it doesn't interfere with regular motor updates)
+    // Setup motor position send over BT loop (on other core so it doesn't interfere actual motor movement)
     xTaskCreatePinnedToCore(
         sendMotorPositionUpdate,   // Function of task
         "SendMotorPositionUpdate", // Name of task

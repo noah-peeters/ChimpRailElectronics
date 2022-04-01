@@ -6,13 +6,19 @@
 #include <BLEServer.h>
 #include <BLE2902.h>
 
-class StepMovementCallbacks : public BLECharacteristicCallbacks
+class StepMovementCallback : public BLECharacteristicCallbacks
 {
 public:
     void onWrite(BLECharacteristic *pCharacteristic);
 };
 
-class ContinuousMovementCallbacks : public BLECharacteristicCallbacks
+class ContinuousMovementCallback : public BLECharacteristicCallbacks
+{
+public:
+    void onWrite(BLECharacteristic *pCharacteristic);
+};
+
+class ShutterReleaseCallback : public BLECharacteristicCallbacks
 {
 public:
     void onWrite(BLECharacteristic *pCharacteristic);

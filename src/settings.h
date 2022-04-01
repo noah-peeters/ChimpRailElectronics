@@ -25,6 +25,7 @@
 #define START_STACKING_WRTIE_UUID "bed1dd25-79f2-4ce2-a6fa-000471efe3a0"
 #define NOTIFY_STEPS_UUID "d2f362f4-6542-4b13-be5e-8c81d423a347"
 #define NOTIFY_STACKING_STEPS_TAKEN_UUID "c14b46e2-553a-4664-98b0-653494882964"
+#define TAKE_PICTURE_UUID "74c3cf2a-a5ce-4ee3-9a31-6a997cfc89e3"
 
 // Shared variables (between multiple files)
 extern AccelStepper STEPPER_MOTOR;
